@@ -41,7 +41,7 @@ type CoqIO = RWST CoqReader CoqWriter CoqState IO
 type CoqtopIO a = CoqIO (Value a)
 
 hResponseDebug :: String -> IO ()
-hResponseDebug s = if True then putStrLn s else return ()
+hResponseDebug s = if False then putStrLn s else return ()
 
 messageMaxLen :: Int
 messageMaxLen = 1000
@@ -104,7 +104,7 @@ hQuery :: (ToXML i) => String -> i -> CoqIO ()
 hQuery cmd input = do
   (hi, _, _, _) <- ask
   let queryStr = mkTag "call" cmd input
-  liftIO . putStrLn $ queryStr
+  -- liftIO . putStrLn $ queryStr
   liftIO $ hPutStr hi queryStr
   return ()
 
