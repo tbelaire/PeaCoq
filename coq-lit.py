@@ -271,7 +271,10 @@ def weave(lines):
             print("<pre><code>", end='')
         elif line.startswith("(*end code") or line.startswith("end code*)"):
             #print(state[-1], file=sys.stderr)
-            assert state[-1] == CODE
+            if state[-1] != CODE:
+                sys.stderr.write("Exiting `code` state while in state {}\nOn line {}\n"
+                                 .format(state[-1], i))
+                sys.exit("Syntax Error")
             state.pop()
             print("</code></pre>", end='')
         elif line.startswith("(*raw"):

@@ -1,3 +1,4 @@
+(*begin code*)
 Theorem n_plus_z : forall n, n + 0 = n.
 Proof.
     intros n.
@@ -7,4 +8,4 @@ Proof.
     rewrite IHn.
     reflexivity.
 Qed.
-
+(*end code*)

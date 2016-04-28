@@ -42,28 +42,32 @@ print_goals' (open_goal:gs) max_goals = do
     let (MkGoal _id contexts goal) = open_goal
     putStrLn ""
     forM_ contexts $ \c ->
-        putStrLn  c
+        putStrLn $ replace_spaces c
     putStrLn $ "======================== ( 1 / " ++ show num_goals ++ " ) "
-    putStrLn goal
+    putStrLn $ replace_spaces goal
     putStrLn ""
 
     forM_ (zip [2..goals_shown] gs) $ \(i,g) -> do
         let (MkGoal _id contexts goal) = g
         putStrLn $ "======================== ( " ++ show i ++ " / " ++ show num_goals ++ " ) "
-        putStrLn goal
+        putStrLn $ replace_spaces goal
         putStrLn ""
 
   where num_goals = 1 + length gs
         goals_shown = maybe num_goals id max_goals
 
-print_current_goal :: Goals -> IO ()
-print_current_goal (MkGoals (MkPreGoal (g:_) _ _ _)) = do
-    print_a_goal g
-print_goal _ = return ()
-
 
 match_print_goals (ValueGood (Just goals)) max_goals = liftIO $ print_goals goals max_goals
 match_print_goals _ _ = return ()
+
+should_add_context :: String -> Bool
+should_add_context line = last line == '.'
+                        && line /= "Qed."
+                        && take 7 line /= "Theorem"
+                        && take 5 line /= "Proof"
+
+replace_spaces :: String -> String
+replace_spaces line = map (\c -> if c == ' ' then ' ' else c) line
 
 main :: IO ()
 main = do
@@ -74,22 +78,28 @@ main = do
   where
     io :: Handles -> String -> CoqtopIO ()
     io (_, _, _he, _ph) coq_file = do
-      forM_ (lines coq_file) $ \line -> do
-        liftIO $ putStrLn line
-        liftIO $ putStrLn "(*context"
-        g <- goal'
-        match_print_goals g (Just 1)
+      forM_ (lines coq_file) $ \line_with_spaces -> do
+        let line = replace_spaces line_with_spaces
 
-        liftIO $ putStrLn "<br />"
-        liftIO $ putStrLn ""
-        liftIO $ putStrLn line
-        liftIO $ putStrLn ""
-        liftIO $ putStrLn "<br />"
+        if should_add_context line then do -- A smarter check is in order.
+            liftIO $ putStrLn "(*context"
+            g <- goal'
+            match_print_goals g (Just 1)
 
-        add' line
-        g <- goal'
-        match_print_goals g Nothing
-        liftIO $ putStrLn "*)"
+            liftIO $ putStrLn "<br />"
+            liftIO $ putStrLn ""
+            liftIO $ putStrLn line
+            liftIO $ putStrLn ""
+            liftIO $ putStrLn "<br />"
+
+            add' line
+            g <- goal'
+            match_print_goals g Nothing
+            liftIO $ putStrLn "*)"
+        else -- Just add the line, don't print anything.
+            void $ add' line
+
+        liftIO $ putStrLn line
 
       return (ValueGood ())
       {-
