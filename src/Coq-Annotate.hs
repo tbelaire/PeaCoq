@@ -19,6 +19,31 @@ coqtop = "/usr/local/Cellar/coq/8.5/bin/coqtop -ideslave -main-channel stdfds"
 example_file :: String
 example_file = "example.v"
 
+print_a_goal :: Goal -> IO ()
+print_a_goal (MkGoal _id contexts goal) = do
+    forM_ contexts $ \c ->
+        putStrLn  c
+    putStrLn "===================="
+    putStrLn goal
+
+
+print_goals :: Goals -> IO ()
+print_goals (MkGoals (MkPreGoal gs _ _ _)) = do
+    putStrLn "(*context"
+    forM_ gs $ \g -> do
+        putStrLn ""
+        print_a_goal g
+        putStrLn ""
+    putStrLn "*)"
+
+print_current_goal :: Goals -> IO ()
+print_current_goal (MkGoals (MkPreGoal (g:_) _ _ _)) = do
+    putStrLn "(*context"
+    print_a_goal g
+    putStrLn "*)"
+print_goal _ = return ()
+
+
 main :: IO ()
 main = do
   hs <- startCoqtop coqtop
@@ -35,30 +60,11 @@ main = do
         add' line
         g <- goal'
         case g of
-            ValueGood (Just (MkGoals (MkPreGoal gs g _ _))) -> liftIO $ do
-                putStrLn "(*context"
-                forM_ gs $ \x -> case x of
-                    MkGoal _id contexts goal -> do
-                        putStrLn ""
-                        forM_ contexts $ \c ->
-                            putStrLn  c
-                        putStrLn "===================="
-                        putStrLn goal
-                        putStrLn ""
-                putStrLn "*)"
+            ValueGood (Just goals) -> liftIO $ print_goals goals
             _ -> return ()
 
       return (ValueGood ())
       {-
-        case g of
-            ValueGood (Just (MkGoals (MkPreGoal
-               ((MkGoal _id contexts goal):gs) g _ _))) -> liftIO $ do
-                putStrLn "(*context"
-                forM_ contexts $ \c ->
-                    putStrLn  c
-                putStrLn "===================="
-                putStrLn goal
-                putStrLn "*)"
                 -}
 
 {-
