@@ -29,20 +29,19 @@ print_a_goal (MkGoal _id contexts goal) = do
 
 print_goals :: Goals -> IO ()
 print_goals (MkGoals (MkPreGoal gs _ _ _)) = do
-    putStrLn "(*context"
     forM_ gs $ \g -> do
         putStrLn ""
         print_a_goal g
         putStrLn ""
-    putStrLn "*)"
 
 print_current_goal :: Goals -> IO ()
 print_current_goal (MkGoals (MkPreGoal (g:_) _ _ _)) = do
-    putStrLn "(*context"
     print_a_goal g
-    putStrLn "*)"
 print_goal _ = return ()
 
+
+match_print_goal (ValueGood (Just goals)) = liftIO $ print_goals goals
+match_print_goal _ = return ()
 
 main :: IO ()
 main = do
@@ -54,14 +53,21 @@ main = do
     io :: Handles -> String -> CoqtopIO ()
     io (_, _, _he, _ph) coq_file = do
       forM_ (lines coq_file) $ \line -> do
+        liftIO $ putStrLn line
+        liftIO $ putStrLn "(* context"
+        g <- goal'
+        match_print_goal g
+
+        liftIO $ putStrLn "<br />"
         liftIO $ putStrLn ""
         liftIO $ putStrLn line
         liftIO $ putStrLn ""
+        liftIO $ putStrLn "<br />"
+
         add' line
         g <- goal'
-        case g of
-            ValueGood (Just goals) -> liftIO $ print_goals goals
-            _ -> return ()
+        match_print_goal g
+        liftIO $ putStrLn "*)"
 
       return (ValueGood ())
       {-
