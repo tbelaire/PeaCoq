@@ -19,20 +19,42 @@ coqtop = "/usr/local/Cellar/coq/8.5/bin/coqtop -ideslave -main-channel stdfds"
 example_file :: String
 example_file = "example.v"
 
+
+foreground_goals :: Goals -> [Goal]
+foreground_goals (MkGoals (MkPreGoal gs _ _ _)) = gs
+
 print_a_goal :: Goal -> IO ()
 print_a_goal (MkGoal _id contexts goal) = do
     forM_ contexts $ \c ->
         putStrLn  c
-    putStrLn "===================="
+    putStrLn "========================"
     putStrLn goal
 
 
-print_goals :: Goals -> IO ()
-print_goals (MkGoals (MkPreGoal gs _ _ _)) = do
-    forM_ gs $ \g -> do
+print_goals :: Goals -> Maybe Int -> IO ()
+print_goals gs max_goals = print_goals' (foreground_goals gs) max_goals
+
+-- Print goals shows the first `max_goals` along with their contexts.
+print_goals' :: [Goal] -> Maybe Int -> IO ()
+print_goals' [] max_goals = putStrLn "0 subgoals"
+print_goals' (open_goal:gs) max_goals = do
+
+    let (MkGoal _id contexts goal) = open_goal
+    putStrLn ""
+    forM_ contexts $ \c ->
+        putStrLn  c
+    putStrLn $ "======================== ( 1 / " ++ show num_goals ++ " ) "
+    putStrLn goal
+    putStrLn ""
+
+    forM_ (zip [2..goals_shown] gs) $ \(i,g) -> do
+        let (MkGoal _id contexts goal) = g
+        putStrLn $ "======================== ( " ++ show i ++ " / " ++ show num_goals ++ " ) "
+        putStrLn goal
         putStrLn ""
-        print_a_goal g
-        putStrLn ""
+
+  where num_goals = 1 + length gs
+        goals_shown = maybe num_goals id max_goals
 
 print_current_goal :: Goals -> IO ()
 print_current_goal (MkGoals (MkPreGoal (g:_) _ _ _)) = do
@@ -40,8 +62,8 @@ print_current_goal (MkGoals (MkPreGoal (g:_) _ _ _)) = do
 print_goal _ = return ()
 
 
-match_print_goal (ValueGood (Just goals)) = liftIO $ print_goals goals
-match_print_goal _ = return ()
+match_print_goals (ValueGood (Just goals)) max_goals = liftIO $ print_goals goals max_goals
+match_print_goals _ _ = return ()
 
 main :: IO ()
 main = do
@@ -54,9 +76,9 @@ main = do
     io (_, _, _he, _ph) coq_file = do
       forM_ (lines coq_file) $ \line -> do
         liftIO $ putStrLn line
-        liftIO $ putStrLn "(* context"
+        liftIO $ putStrLn "(*context"
         g <- goal'
-        match_print_goal g
+        match_print_goals g (Just 1)
 
         liftIO $ putStrLn "<br />"
         liftIO $ putStrLn ""
@@ -66,7 +88,7 @@ main = do
 
         add' line
         g <- goal'
-        match_print_goal g
+        match_print_goals g Nothing
         liftIO $ putStrLn "*)"
 
       return (ValueGood ())
